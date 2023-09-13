@@ -1,20 +1,34 @@
-use anyhow::{Context, Result};
-use std::env;
-use chatgpt::types::CompletionResponse;
-use serde::{Serialize, Deserialize};
-use anyhow::anyhow;
 
-// use crate::db_setup::setup_database;
+mod db_setup;
+
+use anyhow::anyhow;
+use anyhow::Result;
+use chatgpt::types::CompletionResponse;
+use serde::{Deserialize, Serialize};
+use sqlx::SqlitePool;
+use std::env;
+
+use crate::db_setup::setup_database;
 
 use chatgpt::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // let sqlite_pool = setup_database(&command_line_args.database).await;
+    let database_url:String = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let sqlite_pool = setup_database(database_url.as_str()).await;
+
+
+    let t = get_thread(1, sqlite_pool).await?;
+    println!("{:?}", t);
 
     let args: Vec<String> = env::args().collect();
 
     let key = &args[1];
+
+
+    
+
+
 
     let original_tweet = r#"
         The reason I know capitalism is inefficient is that people work much better via intrinsic motivation than extrinsic motivation
@@ -81,9 +95,8 @@ async fn main() -> Result<()> {
         The persona is reading an online discussion thread. The thread starts with a tweet, followed by a thread of zero or more replies to the tweet.
     "#;
 
-
     for idx in 0..=replies.len() {
-        let thread = Thread{
+        let thread = Thread {
             original_tweet: original_tweet.to_string(),
             replies: replies.iter().take(idx).map(|elem| elem.clone()).collect(),
         };
@@ -119,7 +132,6 @@ async fn get_stance(persona: String, thread: Thread, key: &str) -> Result<Stance
             .unwrap(),
     )?;
 
-
     #[derive(Deserialize, Debug)]
     struct ChatGPTResult {
         reasoning: String,
@@ -146,9 +158,7 @@ async fn get_stance(persona: String, thread: Thread, key: &str) -> Result<Stance
         "#
     );
 
-    let response: CompletionResponse = client
-        .send_message(prompt)
-        .await?;
+    let response: CompletionResponse = client.send_message(prompt).await?;
 
     let parsed_response: ChatGPTResult = serde_json::from_str(response.message().content.as_str())?;
 
@@ -157,7 +167,50 @@ async fn get_stance(persona: String, thread: Thread, key: &str) -> Result<Stance
     match parsed_response.verdict.to_lowercase().as_str() {
         "disagree" => Ok(Stance::Disagree),
         "agree" => Ok(Stance::Agree),
-        _ => Err(anyhow!("Could decode stance for response: {:?}", parsed_response))
+        _ => Err(anyhow!(
+            "Could decode stance for response: {:?}",
+            parsed_response
+        )),
     }
 }
 
+/*
+
+create table post (
+    id integer primary key -- row id
+    , content text not null
+    , parent integer references post (id) on delete cascade on update cascade -- nullable
+);
+*/
+
+pub async fn get_thread(post_id: i32, sqlite_pool: SqlitePool) -> Result<Thread> {
+    let original_post = sqlx::query!(
+        r#"
+        select content
+        from post
+        where id = $1
+    "#,
+        post_id
+    )
+    .fetch_one(&sqlite_pool)
+    .await?;
+
+    // use sqlx to read a vec<String> directly from the database
+    let replies: Vec<String> = sqlx::query!(
+        r#"
+        select content
+        from post
+        where parent = $1
+    "#,
+        post_id
+    )
+    .fetch_all(&sqlite_pool)
+    .await?
+    .iter()
+    .map(|row| row.content.clone())
+    .collect();
+    Ok(Thread {
+        original_tweet: original_post.content,
+        replies,
+    })
+}
