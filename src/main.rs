@@ -22,7 +22,7 @@ async fn main() -> Result<()> {
         AND it is very rare / nearly impossible to align extrinsic/intrinsic incentives in a totally abstracted race to the bottom economic framework.
         "#;
 
-    let replies = vec![
+    let replies: Vec<String> = vec![
         r#"
             And yet intrinsic motivation isn’t always sufficient to produce cooperation at scale.
 
@@ -40,7 +40,7 @@ async fn main() -> Result<()> {
             "#.to_string(),
     ];
 
-    let thread = Thread{original_tweet: original_tweet.to_string(), replies: replies};
+    // let thread = Thread{original_tweet: original_tweet.to_string(), replies: replies};
 
     let persona = r#"
         Name: Emily Anderson
@@ -81,9 +81,17 @@ async fn main() -> Result<()> {
         The persona is reading an online discussion thread. The thread starts with a tweet, followed by a thread of zero or more replies to the tweet.
     "#;
 
-    let stance = get_stance(persona.to_string(), thread, key).await?;
 
-    println!("{:?}", stance);
+    for idx in 0..=replies.len() {
+        let thread = Thread{
+            original_tweet: original_tweet.to_string(),
+            replies: replies.iter().take(idx).map(|elem| elem.clone()).collect(),
+        };
+        let stance = get_stance(persona.to_string(), thread, key).await?;
+        println!("{:?}", stance);
+    }
+
+    // let stance = get_stance(persona.to_string(), thread, key).await?;
 
     Ok(())
 }
@@ -94,7 +102,7 @@ enum Stance {
     Disagree,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 struct Thread {
     original_tweet: String,
     replies: Vec<String>,
