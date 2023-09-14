@@ -21,7 +21,7 @@ pub async fn generate_persona(key: &str) -> Result<String> {
 
     let prompt = format!(
         r#"
-        	Generate a random persona
+            Generate a random persona
         "#
     );
 
