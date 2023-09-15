@@ -1,5 +1,4 @@
 mod db_setup;
-mod get_prompt_stats;
 mod persona;
 mod prompts;
 
