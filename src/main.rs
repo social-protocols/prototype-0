@@ -1,16 +1,14 @@
 mod db_setup;
+mod get_prompt_stats;
+mod persona;
 mod prompts;
 
-use anyhow::anyhow;
 use anyhow::Result;
-use chatgpt::types::CompletionResponse;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use sqlx::SqlitePool;
 use std::env;
 
 use crate::db_setup::setup_database;
-
-use chatgpt::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<()> {
