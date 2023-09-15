@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 chatgpt_rs = { version = "1.2.2", features = ["functions"] }
-sqlx = { version = "0.7", features = ["sqlite", "macros", "runtime-tokio"] }
+sqlx = { version = "0.7.1", features = ["sqlite", "macros", "runtime-tokio"] }
 tokio = { version = "1.32.0", features = ["full"] }
 anyhow = "1.0.75"
 serde = { version = "1.0.168", features = ["derive"] }
